@@ -48,9 +48,13 @@ class AuthService
 
     public function attempt(string $username, string $password): bool
     {
-        // TODO: implement this for authenticating the user
-        // TODO: make sur ethe user exists and the password matches
-        // TODO: don't forget to store in session user data needed afterwards
+        // check user and password
+        $user = $this->users->findByUsername($username);
+        Assert::notNull($user, 'User not found');
+        Assert::notFalse(password_verify($password, $user->passwordHash), 'Wrong password');
+        
+        $_SESSION['user_id'] = $user->id; // Store user ID in session
+        $_SESSION['username'] = $user->username; // Store username in session
 
         return true;
     }

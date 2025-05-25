@@ -35,7 +35,18 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
 
     public function save(Expense $expense): void
     {
-        // TODO: Implement save() method.
+        $query = 'INSERT INTO expenses (user_id, date, category, amount_cents, description) 
+                  VALUES (:user_id, :date, :category, :amount_cents, :description)';
+        $statement = $this->pdo->prepare($query);
+        $statement->execute([
+            'user_id' => $expense->userId,
+            'date' => $expense->date->format('m.d.Y'),
+            'category' => $expense->category,
+            'amount_cents' => $expense->amountCents,
+            'description' => $expense->description,
+        ]);
+        $expense->id = (int)$this->pdo->lastInsertId();
+
     }
 
     public function delete(int $id): void

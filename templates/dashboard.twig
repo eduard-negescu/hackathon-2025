@@ -3,6 +3,13 @@
 {% block content %}
     <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
 
+    <form action="/logout" method="GET" class="inline">
+        <button type="submit" class="text-gray-300 hover:text-white">Logout</button>
+    </form>
+    <a href="/" class="mr-4 text-gray-300 hover:text-white inline-flex items-center">Dashboard</a>
+    <a href="/expenses" class="mr-4 text-gray-300 hover:text-white inline-flex items-center">Expenses</a>
+    <div class="border-l border-gray-700 mx-4 h-6 inline-block align-middle"></div>
+
     <section class="mb-8">
         <h2 class="text-xl font-bold mb-4">Overspending Alerts</h2>
         {# TODO: you have below examples for both success and failure messages #}

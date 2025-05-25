@@ -33,8 +33,10 @@ class ExpenseController extends BaseController
         $userId = 1; // TODO: obtain logged-in user ID from session
         $page = (int)($request->getQueryParams()['page'] ?? 1);
         $pageSize = (int)($request->getQueryParams()['pageSize'] ?? self::PAGE_SIZE);
+        $year = (int)($request->getQueryParams()['year'] ?? date('Y'));
+        $month = (int)($request->getQueryParams()['month'] ?? date('n'));
 
-        $expenses = $this->expenseService->list($userId, $page, $pageSize);
+        $expenses = $this->expenseService->list($userId, $year, $month, $page, $pageSize);
 
         return $this->render($response, 'expenses/index.twig', [
             'expenses' => $expenses,
@@ -45,24 +47,36 @@ class ExpenseController extends BaseController
 
     public function create(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to display the create expense page
-
-        // Hints:
-        // - obtain the list of available categories from configuration and pass to the view
-
-        return $this->render($response, 'expenses/create.twig', ['categories' => []]);
+        return $this->render($response, 'expenses/create.twig', ['categories' => [
+            'Transportation' => 200,
+            'Utilities' => 250,
+            'Entertainment' => 100,
+            'Groceries' => 300,
+        ]]);
     }
 
     public function store(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to create a new expense
+        $data = $request->getParsedBody();
+        $userId = $_SESSION['user_id'] ?? null; // TODO: obtain logged-in user ID from session
+        $amount = (float)($data['amount'] ?? 0);
+        $description = (string)($data['description'] ?? '');
+        $date = new \DateTimeImmutable($data['date'] ?? 'now');
+        $category = (string)($data['category'] ?? '');
 
-        // Hints:
-        // - use the session to get the current user ID
-        // - use the expense service to create and persist the expense entity
-        // - rerender the "expenses.create" page with included errors in case of failure
-        // - redirect to the "expenses.index" page in case of success
-
+        try {
+            $this->expenseService->create($userId, $amount, $description, $date, $category);
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        } catch (\InvalidArgumentException $e) {
+            // handle validation errors
+            return $this->render($response, 'expenses/create.twig', [
+                'errors' => ['amount' => $e->getMessage()],
+                'amount' => $amount,
+                'description' => $description,
+                'date' => $date->format('m-d-Y'),
+                'category' => $category
+            ]);
+        }
         return $response;
     }
 

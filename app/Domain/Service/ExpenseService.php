@@ -9,6 +9,7 @@ use App\Domain\Entity\User;
 use App\Domain\Repository\ExpenseRepositoryInterface;
 use DateTimeImmutable;
 use Psr\Http\Message\UploadedFileInterface;
+use Webmozart\Assert\Assert;
 
 class ExpenseService
 {
@@ -16,14 +17,14 @@ class ExpenseService
         private readonly ExpenseRepositoryInterface $expenses,
     ) {}
 
-    public function list(User $user, int $year, int $month, int $pageNumber, int $pageSize): array
+    public function list(int $userId, int $year, int $month, int $pageNumber, int $pageSize): array
     {
         // TODO: implement this and call from controller to obtain paginated list of expenses
         return [];
     }
 
     public function create(
-        User $user,
+        int $userId,
         float $amount,
         string $description,
         DateTimeImmutable $date,
@@ -32,7 +33,9 @@ class ExpenseService
         // TODO: implement this to create a new expense entity, perform validation, and persist
 
         // TODO: here is a code sample to start with
-        $expense = new Expense(null, $user->id, $date, $category, (int)$amount, $description);
+        $amountCents = (int)round($amount * 100);
+
+        $expense = new Expense(null, $userId, $date, $category, (int)$amount, $description);
         $this->expenses->save($expense);
     }
 
