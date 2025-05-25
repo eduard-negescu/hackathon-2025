@@ -30,18 +30,24 @@ class ExpenseController extends BaseController
         // - use the expense service to fetch expenses for the current user
 
         // parse request parameters
-        $userId = 1; // TODO: obtain logged-in user ID from session
+        $userId = $_SESSION['user_id'];
         $page = (int)($request->getQueryParams()['page'] ?? 1);
         $pageSize = (int)($request->getQueryParams()['pageSize'] ?? self::PAGE_SIZE);
         $year = (int)($request->getQueryParams()['year'] ?? date('Y'));
         $month = (int)($request->getQueryParams()['month'] ?? date('n'));
 
-        $expenses = $this->expenseService->list($userId, $year, $month, $page, $pageSize);
+        $result = $this->expenseService->list($userId, $year, $month, $page, $pageSize);
+
+        $expenses = $result['expenses'] ?? [];
+        $total = $result['total'] ?? 0;
 
         return $this->render($response, 'expenses/index.twig', [
             'expenses' => $expenses,
+            'total'    => $total,
             'page'     => $page,
             'pageSize' => $pageSize,
+            'year'     => $year,
+            'month'    => $month,
         ]);
     }
 
@@ -60,18 +66,19 @@ class ExpenseController extends BaseController
         $data = $request->getParsedBody();
         $userId = $_SESSION['user_id'] ?? null; // TODO: obtain logged-in user ID from session
         $amount = (float)($data['amount'] ?? 0);
+        $amountCents = (int)round($amount * 100); // convert to cents
         $description = (string)($data['description'] ?? '');
         $date = new \DateTimeImmutable($data['date'] ?? 'now');
         $category = (string)($data['category'] ?? '');
 
         try {
-            $this->expenseService->create($userId, $amount, $description, $date, $category);
+            $this->expenseService->create($userId, $amountCents, $description, $date, $category);
             return $response->withHeader('Location', '/expenses')->withStatus(302);
         } catch (\InvalidArgumentException $e) {
             // handle validation errors
             return $this->render($response, 'expenses/create.twig', [
                 'errors' => ['amount' => $e->getMessage()],
-                'amount' => $amount,
+                'amount' => $amountCents,
                 'description' => $description,
                 'date' => $date->format('m-d-Y'),
                 'category' => $category

@@ -40,7 +40,7 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
         $statement = $this->pdo->prepare($query);
         $statement->execute([
             'user_id' => $expense->userId,
-            'date' => $expense->date->format('m.d.Y'),
+            'date' => $expense->date->format('Y-m-d'),
             'category' => $expense->category,
             'amount_cents' => $expense->amountCents,
             'description' => $expense->description,
@@ -57,15 +57,66 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
 
     public function findBy(array $criteria, int $from, int $limit): array
     {
-        // TODO: Implement findBy() method.
-        return [];
+        $userId = $criteria['user_id'] ?? null;
+        $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
+        $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
+
+        error_log("Finding expenses for user_id: $userId, year: $year, month: $month, from: $from, limit: $limit");
+
+        $query = 'SELECT * FROM expenses WHERE user_id = :user_id';
+        $params = ['user_id' => $userId];
+
+        if ($year && $month) {
+            $query .= ' AND strftime("%Y", date) = :year AND strftime("%m", date) = :month';
+            $params['year'] = $year;
+            $params['month'] = $month;
+        } elseif ($year) {
+            $query .= ' AND strftime("%Y", date) = :year';
+            $params['year'] = $year;
+        } 
+
+        $query .= ' ORDER BY date DESC LIMIT :limit OFFSET :from';
+        
+        $params['from'] = $from;
+        $params['limit'] = $limit;
+        
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($params);
+
+        $expenses = [];
+        while ($data = $statement->fetch()) {
+            $expenses[] = $this->createExpenseFromData($data);
+        }
+        error_log("Found " . count($expenses) . " expenses for user_id: $userId, year: $year, month: $month");
+        return $expenses;
     }
 
 
     public function countBy(array $criteria): int
     {
-        // TODO: Implement countBy() method.
-        return 0;
+        $userId = $criteria['user_id'] ?? null;
+        $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
+        $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
+
+
+        $query = 'SELECT COUNT(id) FROM expenses WHERE user_id = :user_id';
+        $params = ['user_id' => $userId];
+
+        if ($year && $month) {
+            $query .= ' AND strftime("%Y", date) = :year AND strftime("%m", date) = :month';
+            $params['year'] = $year;
+            $params['month'] = $month;
+        } elseif ($year) {
+            $query .= ' AND strftime("%Y", date) = :year';
+            $params['year'] = $year;
+        }
+
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($params);
+        $result = $statement->fetch();
+        $count = $result ? (int)$result[0] : 0;
+
+        return $count;
     }
 
     public function listExpenditureYears(User $user): array
