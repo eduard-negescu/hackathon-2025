@@ -48,9 +48,11 @@ class ExpenseService
         DateTimeImmutable $date,
         string $category,
     ): void {
-        // TODO: implement this to create a new expense entity, perform validation, and persist
-
-        // TODO: here is a code sample to start with
+        Assert::greaterThan($amountCents, 0, 'Amount must be greater than zero.');
+        Assert::notEmpty($description, 'Description cannot be empty.');
+        Assert::notEmpty($category, 'Category cannot be empty.');
+        Assert::notNull($date, 'Date cannot be null.');
+        Assert::lessThanEq($date, new DateTimeImmutable(), 'Date cannot be in the future.');
 
         $expense = new Expense(null, $userId, $date, $category, $amountCents, $description);
         $this->expenses->save($expense);
@@ -63,6 +65,12 @@ class ExpenseService
         DateTimeImmutable $date,
         string $category,
     ): void {
+        Assert::greaterThan($amountCents, 0, 'Amount must be greater than zero.');
+        Assert::notEmpty($description, 'Description cannot be empty.');
+        Assert::notEmpty($category, 'Category cannot be empty.');
+        Assert::notNull($date, 'Date cannot be null.');
+        Assert::lessThanEq($date, new DateTimeImmutable(), 'Date cannot be in the future.');
+        
         $expense->amountCents = (int)round($amount * 100);
         $expense->description = $description;
         $expense->date = $date;
