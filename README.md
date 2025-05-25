@@ -110,8 +110,8 @@ Participant:
 Features fully implemented:
 - login and registration (I failed to pass the user id to twig)
 - loading, created, updating and deleting expenses
-- MonthlySummaryService
-- Dashboard  without alerts
+- MonthlySummaryService 
+- Dashboard  without alerts, also they are not shown properly in template but averages, totals per category are calculated correctly in the backend
 - Categories from json
 
 Other instructions about setting up the application (if any): ...
