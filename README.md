@@ -104,10 +104,14 @@ A solution with passing analysis and unit tests will receive extra points.
 ## Delivery details
 
 Participant:
-- Full name: ...
-- Email address: ...
+- Full name: Eduard Mihai Negescu
+- Email address: eduardnegescu@gmail.com
 
 Features fully implemented:
-- ...
+- login and registration (I failed to pass the user id to twig)
+- loading, created, updating and deleting expenses
+- MonthlySummaryService
+- Dashboard  without alerts
+- Categories from json
 
 Other instructions about setting up the application (if any): ...
