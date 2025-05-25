@@ -18,7 +18,7 @@ class AlertGenerator
         // ...
     ];
 
-    public function generate(User $user, int $year, int $month): array
+    public function generate(int $userId, int $year, int $month): array
     {
         // TODO: implement this to generate alerts for overspending by category
 

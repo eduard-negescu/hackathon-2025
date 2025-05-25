@@ -55,13 +55,29 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
         $statement->execute([$id]);
     }
 
+    public function update(Expense $expense): void
+    {
+        $query = 'UPDATE expenses SET user_id = :user_id, date = :date, category = :category, 
+                  amount_cents = :amount_cents, description = :description WHERE id = :id';
+        $statement = $this->pdo->prepare($query);
+        
+        $params =[
+            'id' => $expense->id,
+            'user_id' => $expense->userId,
+            'date' => $expense->date->format('Y-m-d'),
+            'category' => $expense->category,
+            'amount_cents' => $expense->amountCents,
+            'description' => $expense->description,
+        ];
+
+        $statement->execute($params);
+    }
+
     public function findBy(array $criteria, int $from, int $limit): array
     {
         $userId = $criteria['user_id'] ?? null;
         $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
         $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
-
-        error_log("Finding expenses for user_id: $userId, year: $year, month: $month, from: $from, limit: $limit");
 
         $query = 'SELECT * FROM expenses WHERE user_id = :user_id';
         $params = ['user_id' => $userId];
@@ -99,7 +115,7 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
         $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
 
 
-        $query = 'SELECT COUNT(id) FROM expenses WHERE user_id = :user_id';
+        $query = 'SELECT COUNT(*) FROM expenses WHERE user_id = :user_id';
         $params = ['user_id' => $userId];
 
         if ($year && $month) {
@@ -121,26 +137,112 @@ class PdoExpenseRepository implements ExpenseRepositoryInterface
 
     public function listExpenditureYears(User $user): array
     {
-        // TODO: Implement listExpenditureYears() method.
-        return [];
+        $query = 'SELECT DISTINCT strftime("%Y", date) as year 
+              FROM expenses 
+              WHERE user_id = :user_id 
+              ORDER BY year DESC';
+        $statement = $this->pdo->prepare($query);
+        $statement->execute(['user_id' => $user->getId()]);
+    
+        $years = [];
+        while ($data = $statement->fetch()) {
+            $years[] = (int)$data['year'];
+        }
+    
+        return $years;
     }
 
     public function sumAmountsByCategory(array $criteria): array
     {
-        // TODO: Implement sumAmountsByCategory() method.
-        return [];
+        $userId = $criteria['user_id'] ?? null;
+        $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
+        $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
+
+        $query = 'SELECT category, SUM(amount_cents) as total_cents 
+              FROM expenses 
+              WHERE user_id = :user_id';
+        $params = ['user_id' => $userId];
+
+        if ($year && $month) {
+            $query .= ' AND strftime("%Y", date) = :year AND strftime("%m", date) = :month';
+            $params['year'] = $year;
+            $params['month'] = $month;
+        } elseif ($year) {
+            $query .= ' AND strftime("%Y", date) = :year';
+            $params['year'] = $year;
+        }
+
+        $query .= ' GROUP BY category ORDER BY total_cents';
+
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($params);
+
+        $results = [];
+        while ($data = $statement->fetch()) {
+            $results[$data['category']] = (float)($data['total_cents'] / 100);
+        }
+        
+        return $results;
     }
 
     public function averageAmountsByCategory(array $criteria): array
     {
-        // TODO: Implement averageAmountsByCategory() method.
-        return [];
+        $userId = $criteria['user_id'] ?? null;
+        $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
+        $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
+
+        $query = 'SELECT category, AVG(amount_cents) as average_cents 
+              FROM expenses 
+              WHERE user_id = :user_id';
+        $params = ['user_id' => $userId];
+
+        if ($year && $month) {
+            $query .= ' AND strftime("%Y", date) = :year AND strftime("%m", date) = :month';
+            $params['year'] = $year;
+            $params['month'] = $month;
+        } elseif ($year) {
+            $query .= ' AND strftime("%Y", date) = :year';
+            $params['year'] = $year;
+        }
+
+        $query .= ' GROUP BY category ORDER BY average_cents';
+
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($params);
+
+        $results = [];
+        while ($data = $statement->fetch()) {
+            $results[$data['category']] = (float)($data['average_cents'] / 100);
+        }
+        
+        return $results;
     }
 
     public function sumAmounts(array $criteria): float
     {
-        // TODO: Implement sumAmounts() method.
-        return 0;
+        $userId = $criteria['user_id'] ?? null;
+        $year = isset($criteria['year']) ? (string)$criteria['year'] : null;
+        $month = isset($criteria['month']) ? str_pad((string)$criteria['month'], 2, '0', STR_PAD_LEFT) : null;
+
+        $query = 'SELECT SUM(amount_cents) as total_cents 
+              FROM expenses 
+              WHERE user_id = :user_id';
+        $params = ['user_id' => $userId];
+
+        if ($year && $month) {
+            $query .= ' AND strftime("%Y", date) = :year AND strftime("%m", date) = :month';
+            $params['year'] = $year;
+            $params['month'] = $month;
+        } elseif ($year) {
+            $query .= ' AND strftime("%Y", date) = :year';
+            $params['year'] = $year;
+        }
+
+        $statement = $this->pdo->prepare($query);
+        $statement->execute($params);
+        $result = $statement->fetch();
+        
+        return (float)($result ? ($result['total_cents'] / 100) : 0.0);
     }
 
     /**

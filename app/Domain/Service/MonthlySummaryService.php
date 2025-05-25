@@ -13,21 +13,30 @@ class MonthlySummaryService
         private readonly ExpenseRepositoryInterface $expenses,
     ) {}
 
-    public function computeTotalExpenditure(User $user, int $year, int $month): float
+    public function computeTotalExpenditure(int $userId, int $year, int $month): float
     {
-        // TODO: compute expenses total for year-month for a given user
-        return 0;
+        return $this->expenses->sumAmounts([
+            'user_id' => $userId,
+            'year' => $year,
+            'month' => $month,
+        ]);
     }
 
-    public function computePerCategoryTotals(User $user, int $year, int $month): array
+    public function computePerCategoryTotals(int $userId, int $year, int $month): array
     {
-        // TODO: compute totals for year-month for a given user
-        return [];
+        return $this->expenses->sumAmountsByCategory([
+            'user_id' => $userId,
+            'year' => $year,
+            'month' => $month,
+        ]);
     }
 
-    public function computePerCategoryAverages(User $user, int $year, int $month): array
+    public function computePerCategoryAverages(int $userId, int $year, int $month): array
     {
-        // TODO: compute averages for year-month for a given user
-        return [];
+        return $this->expenses->averageAmountsByCategory([
+            'user_id' => $userId,
+            'year' => $year,
+            'month' => $month,
+        ]);
     }
 }

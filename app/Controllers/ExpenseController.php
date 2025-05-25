@@ -22,14 +22,6 @@ class ExpenseController extends BaseController
 
     public function index(Request $request, Response $response): Response
     {
-        // TODO: implement this action method to display the expenses page
-
-        // Hints:
-        // - use the session to get the current user ID
-        // - use the request query parameters to determine the page number and page size
-        // - use the expense service to fetch expenses for the current user
-
-        // parse request parameters
         $userId = $_SESSION['user_id'];
         $page = (int)($request->getQueryParams()['page'] ?? 1);
         $pageSize = (int)($request->getQueryParams()['pageSize'] ?? self::PAGE_SIZE);
@@ -53,12 +45,8 @@ class ExpenseController extends BaseController
 
     public function create(Request $request, Response $response): Response
     {
-        return $this->render($response, 'expenses/create.twig', ['categories' => [
-            'Transportation' => 200,
-            'Utilities' => 250,
-            'Entertainment' => 100,
-            'Groceries' => 300,
-        ]]);
+        $category = $_ENV['CATEGORY'];
+        return $this->render($response, 'expenses/create.twig', ['categories' => $category]);
     }
 
     public function store(Request $request, Response $response): Response
@@ -89,16 +77,23 @@ class ExpenseController extends BaseController
 
     public function edit(Request $request, Response $response, array $routeParams): Response
     {
-        // TODO: implement this action method to display the edit expense page
+        $expenseId = (int)$routeParams['id'];
+        $expense = $this->expenseService->find($expenseId);
+        $userId = $_SESSION['user_id'] ?? null;
+        $categories = $_ENV['CATEGORY'];
+        
+        if (!$expense) {
+            return $response->withStatus(404)->write('Expense not found');
+        }
+        
+        if ($expense->userId !== $userId) {
+            return $response->withStatus(403)->write('Forbidden: You do not own this expense');
+        }
 
-        // Hints:
-        // - obtain the list of available categories from configuration and pass to the view
-        // - load the expense to be edited by its ID (use route params to get it)
-        // - check that the logged-in user is the owner of the edited expense, and fail with 403 if not
-
-        $expense = ['id' => 1];
-
-        return $this->render($response, 'expenses/edit.twig', ['expense' => $expense, 'categories' => []]);
+        return $this->render($response, 'expenses/edit.twig', [
+            'expense' => $expense,
+            'categories' => $categories,
+        ]);
     }
 
     public function update(Request $request, Response $response, array $routeParams): Response
@@ -112,8 +107,33 @@ class ExpenseController extends BaseController
         // - update the expense entity with the new values
         // - rerender the "expenses.edit" page with included errors in case of failure
         // - redirect to the "expenses.index" page in case of success
+        $expenseId = (int)$routeParams['id'];
+        $expense = $this->expenseService->find($expenseId);
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$expense) {
+            return $response->withStatus(404)->write('Expense not found');
+        }
+        
+        if ($expense->userId !== $userId) {
+            return $response->withStatus(403)->write('Forbidden: You do not own this expense');
+        }
 
-        return $response;
+        $data = $request->getParsedBody();
+        $amount = (float)($data['amount'] ?? 0);
+        $description = (string)($data['description'] ?? '');
+        $date = new \DateTimeImmutable($data['date'] ?? 'now');
+        $category = (string)($data['category'] ?? '');
+        
+        try {
+            $this->expenseService->update($expense, $amount, $description, $date, $category);
+            return $response->withHeader('Location', '/expenses')->withStatus(302);
+        } catch (\Exception $e) {
+            return $this->render($response, 'expenses/edit.twig', [
+                'errors' => ['form' => $e->getMessage()],
+                'expense' => $expense,
+            ]);
+        }
     }
 
     public function destroy(Request $request, Response $response, array $routeParams): Response
@@ -124,6 +144,17 @@ class ExpenseController extends BaseController
         // - check that the logged-in user is the owner of the edited expense, and fail with 403 if not
         // - call the repository method to delete the expense
         // - redirect to the "expenses.index" page
+        $expenseId = (int)$routeParams['id'];
+        $expense = $this->expenseService->find($expenseId);
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$expense) {
+            return $response->withStatus(404)->write('Expense not found');
+        }
+        if ($expense->userId !== $userId) {
+            return $response->withStatus(403)->write('Forbidden: You do not own this expense');
+        }
+        $this->expenseService->delete($expenseId);
+        $response = $response->withHeader('Location', '/expenses')->withStatus(302);
 
         return $response;
     }

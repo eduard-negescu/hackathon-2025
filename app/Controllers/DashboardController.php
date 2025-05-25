@@ -7,12 +7,15 @@ namespace App\Controllers;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Views\Twig;
+use App\Domain\Service\MonthlySummaryService;
+use App\Domain\Service\AlertGenerator;
 
 class DashboardController extends BaseController
 {
     public function __construct(
         Twig $view,
-        // TODO: add necessary services here and have them injected by the DI container
+        private readonly MonthlySummaryService $monthlySummaryService,
+        private readonly AlertGenerator $alertGenerator,
     )
     {
         parent::__construct($view);
@@ -28,12 +31,30 @@ class DashboardController extends BaseController
         // TODO: call service to compute category totals per selected year/month
         // TODO: call service to compute category averages per selected year/month
 
+        $userId = $_SESSION['user_id'] ?? null;
+        $queryParams = $request->getQueryParams();
+        $year = isset($queryParams['year']) ? (int)$queryParams['year'] : (int)date('Y');
+        $month = isset($queryParams['month']) ? (int)$queryParams['month'] : (int)date('m');
+
+        $years = range(2015, date('Y'));
+        $totalForMonth = $this->monthlySummaryService->computeTotalExpenditure($userId, $year, $month);
+        $totalsForCategories = $this->monthlySummaryService->computePerCategoryTotals($userId, $year, $month);
+        $averagesForCategories = $this->monthlySummaryService->computePerCategoryAverages($userId, $year, $month);
+
+        $alerts = $this->alertGenerator->generate($userId, $year, $month);
+
+        error_log("Total amount for groceries: " . $totalsForCategories['groceries']);
+
+
         return $this->render($response, 'dashboard.twig', [
 
-            'alerts'                => [],
-            'totalForMonth'         => [],
-            'totalsForCategories'   => [],
-            'averagesForCategories' => [],
+            'alerts'                => $alerts,
+            'totalForMonth'         => $totalForMonth,
+            'totalsForCategories'   => $totalsForCategories,
+            'averagesForCategories' => $averagesForCategories,
+            'years'                 => $years,
+            'selectedYear'          => $year,
+            'selectedMonth'         => $month,
         ]);
     }
 }
